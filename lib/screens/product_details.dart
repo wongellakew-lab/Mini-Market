@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../bloc/cart_bloc/cart_bloc.dart';
 import '../bloc/product_bloc/product_bloc.dart';
 import '../data/categories.dart';
 import '../data/market_store.dart';
@@ -65,7 +66,9 @@ class _ProductDetailsState extends State<ProductDetails> {
     final product = MarketStore.findProduct(widget.productId);
     if (product == null) return;
 
-    MarketStore.addToCart(product, quantity);
+    context.read<CartBloc>().add(
+      AddToCartEvent(product: product, quantity: quantity),
+    );
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
