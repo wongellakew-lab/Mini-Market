@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import '../data/categories.dart';
 import '../data/market_store.dart';
@@ -71,7 +72,7 @@ class _AddProductState extends State<AddProduct> {
       MarketStore.addProduct(newProduct);
     }
 
-    Navigator.of(context).pop(true);
+    context.pop(true);
   }
 
   InputDecoration _inputDecoration({String? hintText}) {
@@ -104,7 +105,7 @@ class _AddProductState extends State<AddProduct> {
         scrolledUnderElevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: () => context.pop(),
         ),
         title: Text(
           isEditing ? 'Edit product' : 'Add product',
@@ -196,7 +197,7 @@ class _AddProductState extends State<AddProduct> {
                         ),
                         const SizedBox(height: 6),
                         DropdownButtonFormField<String>(
-                          value: _selectedCategory,
+                          initialValue: _selectedCategory,
                           style: const TextStyle(
                             fontSize: 16,
                             color: Colors.black,

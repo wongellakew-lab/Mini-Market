@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import '../data/market_store.dart';
-import '../screens/add_product.dart';
-import '../screens/cart_page.dart';
-import '../screens/product_details.dart';
 import '../widgets/product_card.dart';
 
 class HomePage extends StatefulWidget {
@@ -15,21 +13,17 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   Future<void> _openCart() async {
-    await Navigator.of(context)
-        .push(MaterialPageRoute(builder: (_) => const CartPage()));
+    await context.push('/cart');
     if (mounted) setState(() {});
   }
 
   Future<void> _openProductDetails(String productId) async {
-    await Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => ProductDetails(productId: productId)),
-    );
+    await context.push('/product/$productId');
     if (mounted) setState(() {});
   }
 
   Future<void> _openAddProduct() async {
-    await Navigator.of(context)
-        .push(MaterialPageRoute(builder: (_) => const AddProduct()));
+    await context.push('/add-product');
     if (mounted) setState(() {});
   }
 

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import '../data/categories.dart';
 import '../data/market_store.dart';
 import '../models/product.dart';
-import '../screens/add_product.dart';
 
 class ProductDetails extends StatefulWidget {
   final String productId;
@@ -28,9 +28,7 @@ class _ProductDetailsState extends State<ProductDetails> {
   }
 
   Future<void> _editProduct(Product product) async {
-    final updated = await Navigator.of(context).push<bool>(
-      MaterialPageRoute(builder: (_) => AddProduct(product: product)),
-    );
+    final updated = await context.push<bool>('/add-product', extra: product);
 
     if (updated == true && mounted) {
       setState(() {});
@@ -52,7 +50,7 @@ class _ProductDetailsState extends State<ProductDetails> {
             onPressed: () {
               MarketStore.deleteProduct(product.id);
               Navigator.pop(ctx);
-              Navigator.of(context).pop(true);
+              context.pop(true);
             },
             child: const Text('Delete', style: TextStyle(color: Colors.red)),
           ),
@@ -84,7 +82,7 @@ class _ProductDetailsState extends State<ProductDetails> {
         scrolledUnderElevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: () => context.pop(),
         ),
         title: Text(
           product.title,
