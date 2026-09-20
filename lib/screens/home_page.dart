@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../bloc/product_bloc/product_bloc.dart';
 import '../data/market_store.dart';
+import '../models/product.dart';
 import '../widgets/product_card.dart';
 
 class HomePage extends StatefulWidget {
@@ -12,90 +15,100 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  Future<void> _openCart() async {
-    await context.push('/cart');
-    if (mounted) setState(() {});
+  @override
+  void initState() {
+    super.initState();
+
+    context.read<ProductBloc>().add(GetProductsEvent());
   }
 
-  Future<void> _openProductDetails(String productId) async {
-    await context.push('/product/$productId');
-    if (mounted) setState(() {});
+  Future<void> _openProduct(Product product) async {
+    await context.push('/product/${product.id}');
+
+    setState(() {});
+  }
+
+  Future<void> _openCart() async {
+    context.push('/cart');
+
+    setState(() {});
   }
 
   Future<void> _openAddProduct() async {
-    await context.push('/add-product');
-    if (mounted) setState(() {});
+    context.push('/product/new');
+    setState(() {});
   }
 
   @override
   Widget build(BuildContext context) {
-    final products = MarketStore.products;
-    final cartCount = MarketStore.cartCount;
-
     return Scaffold(
-      backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        scrolledUnderElevation: 0,
+        centerTitle: false,
         title: const Text(
           'Mini Market',
-          style: TextStyle(
-            color: Colors.black,
-            fontWeight: FontWeight.bold,
-            fontSize: 22,
-          ),
+          style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
         ),
         actions: [
-          IconButton(
-            icon: Badge(
-              isLabelVisible: cartCount > 0,
-              label: Text('$cartCount', style: const TextStyle(fontSize: 11)),
-              child: const Icon(
-                Icons.shopping_cart,
-                color: Colors.black,
-                size: 24,
-              ),
+          GestureDetector(
+            onTap: _openCart,
+            child: Badge(
+              isLabelVisible: MarketStore.cartCount > 0,
+              label: Text('${MarketStore.cartCount}'),
+              child: const Icon(Icons.shopping_cart),
             ),
-            onPressed: _openCart,
           ),
           const SizedBox(width: 8),
         ],
         bottom: const PreferredSize(
-          preferredSize: Size.fromHeight(1.0),
-          child: Divider(height: 1, thickness: 1, color: Color(0xFFF1F5F9)),
+          preferredSize: Size.fromHeight(1),
+          child: Divider(height: 1),
         ),
       ),
-      body: products.isEmpty
-          ? const Center(
-              child: Text(
-                'No products available',
-                style: TextStyle(fontSize: 16, color: Color(0xFF94A3B8)),
-              ),
-            )
-          : GridView.builder(
-              padding: const EdgeInsets.all(16.0),
-              itemCount: products.length,
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                mainAxisSpacing: 16,
-                crossAxisSpacing: 16,
-                childAspectRatio: 0.82,
-              ),
-              itemBuilder: (context, index) {
-                final product = products[index];
-                return ProductCard(
-                  product: product,
-                  onTap: () => _openProductDetails(product.id),
-                );
-              },
-            ),
+      body: BlocBuilder<ProductBloc, ProductState>(
+        builder: (context, state) {
+          final products = switch (state) {
+            ProductListState(:final products) => products,
+            ProductInitialState() => MarketStore.products,
+            ProductLoading() => MarketStore.products,
+            _ => MarketStore.products,
+          };
+
+          if (state is ProductLoading && products.isEmpty) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          return Padding(
+            padding: const EdgeInsets.all(16),
+            child: products.isEmpty
+                ? const Center(
+                    child: Text(
+                      'No products yet.\nTap + to add your first one.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: Colors.grey),
+                    ),
+                  )
+                : GridView.builder(
+                    itemCount: products.length,
+                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 2,
+                      mainAxisSpacing: 10,
+                      crossAxisSpacing: 10,
+                      childAspectRatio: 0.85,
+                    ),
+                    itemBuilder: (BuildContext context, int index) {
+                      final product = products[index];
+                      return ProductCard(
+                        product: product,
+                        onTap: () => _openProduct(product),
+                      );
+                    },
+                  ),
+          );
+        },
+      ),
       floatingActionButton: FloatingActionButton(
-        elevation: 2,
-        backgroundColor: const Color(0xFFDBE2FE),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
         onPressed: _openAddProduct,
-        child: const Icon(Icons.add, color: Color(0xFF1E293B), size: 28),
+        child: const Icon(Icons.add),
       ),
     );
   }

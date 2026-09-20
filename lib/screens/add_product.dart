@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../bloc/product_bloc/product_bloc.dart';
 import '../data/categories.dart';
 import '../data/market_store.dart';
 import '../models/product.dart';
@@ -16,24 +17,26 @@ class AddProduct extends StatefulWidget {
 
 class _AddProductState extends State<AddProduct> {
   final _formKey = GlobalKey<FormState>();
-  late final TextEditingController _titleController;
-  late final TextEditingController _priceController;
-  late final TextEditingController _descriptionController;
-  late String _selectedCategory;
 
-  bool get isEditing => widget.product != null;
+  final _titleController = TextEditingController();
+  final _priceController = TextEditingController();
+  final _descriptionController = TextEditingController();
+
+  String _category = kCategories.first;
+
+  bool get _isEditing => widget.product != null;
 
   @override
   void initState() {
     super.initState();
-    _titleController = TextEditingController(text: widget.product?.title ?? '');
-    _priceController = TextEditingController(
-      text: widget.product != null ? widget.product!.price.toString() : '0',
-    );
-    _descriptionController = TextEditingController(
-      text: widget.product?.description ?? '',
-    );
-    _selectedCategory = widget.product?.category ?? kCategories.first;
+
+    final product = widget.product;
+    if (product != null) {
+      _titleController.text = product.title;
+      _priceController.text = product.price.toStringAsFixed(0);
+      _descriptionController.text = product.description;
+      _category = product.category;
+    }
   }
 
   @override
@@ -44,236 +47,180 @@ class _AddProductState extends State<AddProduct> {
     super.dispose();
   }
 
-  void _saveProduct() {
+  String? _validateTitle(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return 'Enter a title';
+    }
+    return null;
+  }
+
+  String? _validatePrice(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return 'Enter a price';
+    }
+
+    final price = double.tryParse(value.trim());
+    if (price == null) {
+      return 'Enter a valid number';
+    }
+    if (price <= 0) {
+      return 'Price must be greater than 0';
+    }
+    return null;
+  }
+
+  void _save() {
     if (!_formKey.currentState!.validate()) {
       return;
     }
 
-    final price = double.tryParse(_priceController.text) ?? 0.0;
     final title = _titleController.text.trim();
+    final price = double.parse(_priceController.text.trim());
     final description = _descriptionController.text.trim();
 
-    if (isEditing) {
-      final updated = widget.product!.copyWith(
-        title: title,
-        price: price,
-        category: _selectedCategory,
-        description: description,
+    if (_isEditing) {
+      context.read<ProductBloc>().add(
+        UpdateProductEvent(
+          product: widget.product!.copyWith(
+            title: title,
+            price: price,
+            category: _category,
+            description: description,
+          ),
+        ),
       );
-      MarketStore.updateProduct(updated);
     } else {
-      final newProduct = Product(
-        id: MarketStore.newProductId(),
-        title: title,
-        price: price,
-        category: _selectedCategory,
-        description: description,
+      context.read<ProductBloc>().add(
+        CreateProductEvent(
+          product: Product(
+            id: MarketStore.newProductId(),
+            title: title,
+            price: price,
+            category: _category,
+            description: description,
+          ),
+        ),
       );
-      MarketStore.addProduct(newProduct);
     }
 
-    context.pop(true);
-  }
-
-  InputDecoration _inputDecoration({String? hintText}) {
-    return InputDecoration(
-      hintText: hintText,
-      hintStyle: const TextStyle(color: Color(0xFF94A3B8), fontSize: 16),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Color(0xFF3B82F6), width: 1.5),
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Color(0xFF3B82F6), width: 1.5),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Color(0xFF2563EB), width: 2.0),
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(_isEditing ? 'Product updated' : 'Product added'),
+        duration: const Duration(seconds: 2),
       ),
     );
+
+    Navigator.pop(context);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () => context.pop(),
-        ),
         title: Text(
-          isEditing ? 'Edit product' : 'Add product',
-          style: const TextStyle(
-            color: Colors.black,
-            fontWeight: FontWeight.bold,
-            fontSize: 20,
-          ),
+          _isEditing ? 'Edit product' : 'Add product',
+          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
         ),
-        centerTitle: true,
         bottom: const PreferredSize(
-          preferredSize: Size.fromHeight(1.0),
-          child: Divider(height: 1, thickness: 1, color: Color(0xFFF1F5F9)),
+          preferredSize: Size.fromHeight(1),
+          child: Divider(height: 1),
         ),
       ),
-      body: SafeArea(
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            return SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-              child: ConstrainedBox(
-                constraints: BoxConstraints(
-                  minHeight: constraints.maxHeight - 32,
-                ),
-                child: IntrinsicHeight(
-                  child: Form(
-                    key: _formKey,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Title',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Color(0xFF64748B),
+      body: Form(
+        key: _formKey,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: ListView(
+                  children: [
+                    const _FieldLabel('Title'),
+                    TextFormField(
+                      controller: _titleController,
+                      decoration: const InputDecoration(hintText: 'Desk lamp'),
+                      validator: _validateTitle,
+                    ),
+                    const SizedBox(height: 16),
+
+                    const _FieldLabel('Price'),
+                    TextFormField(
+                      controller: _priceController,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(hintText: '0'),
+                      validator: _validatePrice,
+                    ),
+                    const SizedBox(height: 16),
+
+                    const _FieldLabel('Category'),
+                    DropdownButtonFormField<String>(
+                      initialValue: _category,
+                      items: [
+                        for (final category in kCategories)
+                          DropdownMenuItem(
+                            value: category,
+                            child: Text(category),
                           ),
-                        ),
-                        const SizedBox(height: 6),
-                        TextFormField(
-                          controller: _titleController,
-                          style: const TextStyle(
-                            fontSize: 16,
-                            color: Colors.black,
-                          ),
-                          decoration: _inputDecoration(),
-                          validator: (value) {
-                            if (value == null || value.trim().isEmpty) {
-                              return 'Please enter a title';
-                            }
-                            return null;
-                          },
-                        ),
-                        const SizedBox(height: 16),
-                        const Text(
-                          'Price',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Color(0xFF64748B),
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        TextFormField(
-                          controller: _priceController,
-                          keyboardType: const TextInputType.numberWithOptions(
-                            decimal: true,
-                          ),
-                          style: const TextStyle(
-                            fontSize: 16,
-                            color: Colors.black,
-                          ),
-                          decoration: _inputDecoration(),
-                          validator: (value) {
-                            if (value == null || value.trim().isEmpty) {
-                              return 'Please enter a price';
-                            }
-                            if (double.tryParse(value) == null) {
-                              return 'Please enter a valid number';
-                            }
-                            return null;
-                          },
-                        ),
-                        const SizedBox(height: 16),
-                        const Text(
-                          'Category',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Color(0xFF64748B),
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        DropdownButtonFormField<String>(
-                          initialValue: _selectedCategory,
-                          style: const TextStyle(
-                            fontSize: 16,
-                            color: Colors.black,
-                          ),
-                          decoration: _inputDecoration(),
-                          icon: const Icon(
-                            Icons.arrow_drop_down,
-                            color: Color(0xFF64748B),
-                          ),
-                          items: kCategories.map((category) {
-                            return DropdownMenuItem(
-                              value: category,
-                              child: Text(category),
-                            );
-                          }).toList(),
-                          onChanged: (val) {
-                            if (val != null) {
-                              setState(() {
-                                _selectedCategory = val;
-                              });
-                            }
-                          },
-                        ),
-                        const SizedBox(height: 16),
-                        const Text(
-                          'Description',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Color(0xFF64748B),
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        TextFormField(
-                          controller: _descriptionController,
-                          maxLines: 3,
-                          style: const TextStyle(
-                            fontSize: 16,
-                            color: Colors.black,
-                          ),
-                          decoration: _inputDecoration(
-                            hintText: 'Short description',
-                          ),
-                        ),
-                        const Spacer(),
-                        const SizedBox(height: 24),
-                        SizedBox(
-                          width: double.infinity,
-                          height: 52,
-                          child: ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF2563EB),
-                              elevation: 0,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(14),
-                              ),
-                            ),
-                            onPressed: _saveProduct,
-                            child: const Text(
-                              'Save product',
-                              style: TextStyle(
-                                fontSize: 17,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ),
-                        ),
                       ],
+                      onChanged: (value) {
+                        if (value == null) return;
+                        setState(() => _category = value);
+                      },
+                    ),
+                    const SizedBox(height: 16),
+
+                    const _FieldLabel('Description'),
+                    TextFormField(
+                      controller: _descriptionController,
+                      maxLines: 3,
+                      decoration: const InputDecoration(
+                        hintText: 'Short description',
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                height: 54,
+                child: ElevatedButton(
+                  onPressed: _save,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF2563EB),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  child: Text(
+                    _isEditing ? 'Save changes' : 'Save product',
+                    style: const TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
                 ),
               ),
-            );
-          },
+            ],
+          ),
         ),
       ),
+    );
+  }
+}
+
+class _FieldLabel extends StatelessWidget {
+  final String text;
+
+  const _FieldLabel(this.text);
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Text(text, style: const TextStyle(color: Colors.grey)),
     );
   }
 }
