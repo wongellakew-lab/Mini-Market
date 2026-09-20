@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import 'bloc/cart_bloc/cart_bloc.dart';
 import 'bloc/product_bloc/product_bloc.dart';
 import 'routes/app_router.dart';
 
@@ -13,8 +14,11 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (_) => ProductBloc(),
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider(create: (_) => ProductBloc()),
+        BlocProvider(create: (_) => CartBloc()..add(LoadCartEvent())),
+      ],
       child: MaterialApp.router(
         title: 'Mini Market',
         debugShowCheckedModeBanner: false,
