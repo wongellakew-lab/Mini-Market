@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../data/market_store.dart';
 import '../models/product.dart';
 import '../screens/add_product.dart';
 import '../screens/cart_page.dart';
@@ -17,11 +18,26 @@ final GoRouter appRouter = GoRouter(
       },
       routes: [
         GoRoute(
+          path: 'product/new',
+          builder: (BuildContext context, GoRouterState state) {
+            return const AddProduct();
+          },
+        ),
+        GoRoute(
           path: 'product/:id',
           builder: (BuildContext context, GoRouterState state) {
             final productId = state.pathParameters['id'] ?? '';
             return ProductDetails(productId: productId);
           },
+          routes: [
+            GoRoute(
+              path: 'edit',
+              builder: (BuildContext context, GoRouterState state) {
+                final productId = state.pathParameters['id'] ?? '';
+                return AddProduct(product: MarketStore.findProduct(productId));
+              },
+            ),
+          ],
         ),
         GoRoute(
           path: 'cart',
